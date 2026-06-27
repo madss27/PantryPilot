@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PantryPilot AI 🍳</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8', 300: '#f9a8d4', 400: '#f472b6', 500: '#ec4899', 600: '#db2777' }, // Pink
+                        lilac: { 50: '#f5f3ff', 100: '#ede9fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed' }  // Lilac
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #fdf2f8; }
+        ::-webkit-scrollbar-thumb { background: #fbcfe8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #f472b6; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 1);
+            box-shadow: 0 10px 40px -10px rgba(236, 72, 153, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            box-shadow: 0 4px 14px 0 rgba(236, 72, 153, 0.3);
+        }
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .diet-pill.active {
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 10px rgba(236, 72, 153, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-brand-50 via-white to-lilac-50 text-slate-800 overflow-x-hidden">
+
+    <!-- Navbar -->
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-brand-100">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-brand-400 to-lilac-500 p-2.5 rounded-xl text-white shadow-lg shadow-brand-200">
+                    <i data-lucide="chef-hat" class="w-6 h-6"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">PantryPilot <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-lilac-500">AI</span></h1>
+            </div>
+            <button onclick="location.reload()" class="text-sm font-medium text-slate-500 hover:text-brand-600 transition-colors flex items-center gap-2 bg-brand-50 px-4 py-2 rounded-full hover:bg-brand-100">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Start Over
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-12 relative">
+        
+        <!-- Background Glows -->
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-brand-300/20 rounded-full blur-[100px] pointer-events-none"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-lilac-300/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+        <!-- INPUT VIEW -->
+        <div id="input-view" class="max-w-4xl mx-auto space-y-12 fade-in relative z-10">
+            
+            <div class="text-center space-y-4 slide-up">
+                <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                    Turn what's in your kitchen into <br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-lilac-500">delicious meals.</span>
+                </h2>
+                <p class="text-lg text-slate-500 max-w-2xl mx-auto font-medium">Upload a photo of your fridge or tell us what you have. Our AI will coordinate the perfect menu, minimize waste, and act as your personal chef.</p>
+            </div>
+
+            <!-- API Key Input -->
+            <div class="slide-up glass-card p-5 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between" style="animation-delay: 0.05s;">
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <div class="bg-amber-100 p-2.5 rounded-xl text-amber-600"><i data-lucide="key" class="w-5 h-5"></i></div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-700">Gemini API Key</h3>
+                        <p class="text-xs text-slate-500 font-medium">Get your free key from <a href="https://aistudio.google.com/" target="_blank" class="text-brand-500 hover:underline">Google AI Studio</a></p>
+                    </div>
+                </div>
+                <div class="w-full md:w-auto flex-1 max-w-md relative">
+                    <input type="password" id="api-key-input" class="w-full bg-white border-2 border-slate-100 rounded-xl p-3 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:border-brand-300 focus:ring-4 focus:ring-brand-50 transition-all shadow-sm pr-10" placeholder="Paste your API key here..." autocomplete="off" spellcheck="false" required>
+                    <button id="toggle-key-btn" class="absolute right-3 top-3.5 text-slate-400 hover:text-brand-500 transition-colors">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Inputs -->
+            <div class="grid md:grid-cols-2 gap-6 slide-up" style="animation-delay: 0.1s;">
+                <!-- Image Upload -->
+                <div class="glass-card rounded-3xl p-6 transition-all focus-within:ring-4 focus-within:ring-brand-100">
+                    <h3 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <div class="bg-brand-100 p-1.5 rounded-lg text-brand-600"><i data-lucide="camera" class="w-4 h-4"></i></div> Upload Image
+                    </h3>
+                    <label id="upload-zone" class="flex flex-col items-center justify-center h-48 border-2 border-dashed border-brand-200 bg-white rounded-2xl hover:border-brand-400 hover:bg-brand-50 cursor-pointer transition-all group overflow-hidden relative shadow-sm">
+                        <div id="upload-prompt" class="flex flex-col items-center text-slate-400 group-hover:text-brand-500">
+                            <i data-lucide="image-plus" class="w-10 h-10 mb-3 text-brand-300 group-hover:text-brand-500 transition-colors"></i>
+                            <span class="font-semibold text-slate-600">Fridge, Pantry, or Receipt</span>
+                            <span class="text-xs mt-1 text-slate-400">JPG, PNG up to 5MB</span>
+                        </div>
+                        <img id="image-preview" class="absolute inset-0 w-full h-full object-cover hidden" />
+                        <input type="file" id="image-input" accept="image/*" class="hidden">
+                    </label>
+                    <button id="remove-img-btn" class="mt-4 text-sm text-red-500 hover:text-red-600 font-medium hidden justify-center w-full items-center gap-1 bg-red-50 py-2 rounded-xl">
+                        <i data-lucide="x-circle" class="w-4 h-4"></i> Remove image
+                    </button>
+                </div>
+                
+                <!-- Text Input -->
+                <div class="glass-card rounded-3xl p-6 transition-all focus-within:ring-4 focus-within:ring-brand-100 flex flex-col">
+                    <h3 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <div class="bg-lilac-100 p-1.5 rounded-lg text-lilac-600"><i data-lucide="pen-line" class="w-4 h-4"></i></div> Or Type Ingredients
+                    </h3>
+                    <textarea id="text-input" class="w-full flex-1 bg-white border-2 border-slate-100 rounded-2xl p-4 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-lilac-300 focus:ring-4 focus:ring-lilac-50 resize-none shadow-sm transition-all" placeholder="e.g., Chicken breast, heavy cream, garlic, pasta, spinach..."></textarea>
+                </div>
+            </div>
+
+            <!-- Dietary Options -->
+            <div class="slide-up glass-card p-6 rounded-3xl" style="animation-delay: 0.2s;">
+                <h3 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-wider flex items-center gap-2">
+                    <div class="bg-green-100 p-1.5 rounded-lg text-green-600"><i data-lucide="leaf" class="w-4 h-4"></i></div> Dietary Preferences
+                </h3>
+                <div id="dietary-container" class="flex flex-wrap gap-2.5">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid md:grid-cols-3 gap-5 slide-up" style="animation-delay: 0.3s;">
+                <button onclick="startWorkflow('standard')" class="bg-slate-900 border-2 border-slate-900 hover:border-brand-500 hover:shadow-lg hover:shadow-brand-200 rounded-2xl p-6 flex flex-col items-center gap-3 transition-all hover:-translate-y-1 group">
+                    <div class="bg-white/10 p-4 rounded-full group-hover:bg-brand-500/20 text-brand-200 group-hover:text-white transition-colors">
+                        <i data-lucide="list-video" class="w-7 h-7"></i>
+                    </div>
+                    <div class="text-center">
+                        <div class="font-bold text-white text-lg">Generate Recipes</div>
+                        <div class="text-sm text-slate-300 mt-1">See all options</div>
+                    </div>
+                </button>
+
+                <button onclick="startWorkflow('surprise')" class="bg-white border-2 border-slate-100 hover:border-lilac-300 hover:shadow-lg hover:shadow-lilac-100 rounded-2xl p-6 flex flex-col items-center gap-3 transition-all hover:-translate-y-1 group relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-lilac-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="bg-slate-50 p-4 rounded-full group-hover:bg-lilac-100 text-slate-400 group-hover:text-lilac-600 transition-colors relative z-10">
+                        <i data-lucide="dices" class="w-7 h-7"></i>
+                    </div>
+                    <div class="text-center relative z-10">
+                        <div class="font-bold text-slate-800 text-lg">Surprise Me</div>
+                        <div class="text-sm text-slate-500 mt-1">The ultimate curated meal</div>
+                    </div>
+                </button>
+
+                <button onclick="startWorkflow('chef')" class="btn-primary rounded-2xl p-6 flex flex-col items-center gap-3 transition-all text-white">
+                    <div class="bg-white/20 p-4 rounded-full text-white backdrop-blur-sm shadow-inner">
+                        <i data-lucide="chef-hat" class="w-7 h-7"></i>
+                    </div>
+                    <div class="text-center">
+                        <div class="font-bold text-white text-lg">Start Chef Mode</div>
+                        <div class="text-sm text-brand-100 mt-1 font-medium">Interactive cooking guide</div>
+                    </div>
+                </button>
+            </div>
+            
+            <div id="error-msg" class="bg-red-50 text-red-600 p-4 rounded-xl text-center font-medium border border-red-100 hidden"></div>
+        </div>
+
+        <!-- LOADING VIEW -->
+        <div id="loading-view" class="hidden max-w-lg mx-auto py-20 text-center fade-in">
+            <div class="relative w-28 h-28 mx-auto mb-8">
+                <div class="absolute inset-0 rounded-full border-4 border-brand-100"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-brand-500 border-t-transparent animate-spin"></div>
+                <div class="absolute inset-0 m-auto w-12 h-12 bg-brand-50 rounded-full flex items-center justify-center shadow-inner">
+                    <i data-lucide="sparkles" class="w-6 h-6 text-brand-500"></i>
+                </div>
+            </div>
+            <h3 class="text-3xl font-extrabold text-slate-900 mb-3">Cooking Up Ideas</h3>
+            <p id="loading-status" class="text-brand-600 font-bold text-lg h-8">Preheating the recipe engine...</p>
+            
+            <div class="mt-10 space-y-4 text-left bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                <div class="flex items-center gap-4 text-slate-400 font-medium" id="step-vision">
+                    <i data-lucide="circle-dashed" class="w-6 h-6"></i> <span>Gathering your ingredients</span>
+                </div>
+                <div class="flex items-center gap-4 text-slate-400 font-medium" id="step-recipe">
+                    <i data-lucide="circle-dashed" class="w-6 h-6"></i> <span>Cooking up recipe ideas</span>
+                </div>
+                <div class="flex items-center gap-4 text-slate-400 font-medium" id="step-analyze">
+                    <i data-lucide="circle-dashed" class="w-6 h-6"></i> <span>Finishing the menu details</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULTS VIEW -->
+        <div id="results-view" class="hidden max-w-6xl mx-auto fade-in">
+            
+            <!-- Context Header -->
+            <div class="bg-white shadow-sm border border-slate-100 rounded-3xl p-5 mb-8 flex items-start gap-4">
+                <div class="bg-green-100 text-green-600 p-2.5 rounded-xl mt-1"><i data-lucide="check-circle-2" class="w-6 h-6"></i></div>
+                <div>
+                    <h4 class="font-bold text-slate-900 text-lg mb-1">Detected Ingredients</h4>
+                    <p id="detected-ingredients-list" class="text-slate-600 leading-relaxed font-medium"></p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex overflow-x-auto hide-scrollbar mb-8 border-b-2 border-slate-100 pb-px">
+                <button class="tab-btn active px-6 py-4 font-bold border-b-4 border-brand-500 text-brand-600 flex items-center gap-2 whitespace-nowrap transition-colors rounded-t-xl hover:bg-brand-50/50" data-target="tab-recipes">
+                    <i data-lucide="utensils" class="w-5 h-5"></i> Recipes
+                </button>
+                <button class="tab-btn px-6 py-4 font-bold border-b-4 border-transparent text-slate-400 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap transition-colors rounded-t-xl hover:bg-slate-50" data-target="tab-nutrition">
+                    <i data-lucide="activity" class="w-5 h-5"></i> Nutrition
+                </button>
+                <button class="tab-btn px-6 py-4 font-bold border-b-4 border-transparent text-slate-400 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap transition-colors rounded-t-xl hover:bg-slate-50" data-target="tab-waste">
+                    <i data-lucide="recycle" class="w-5 h-5"></i> Reduce Waste
+                </button>
+                <button class="tab-btn px-6 py-4 font-bold border-b-4 border-transparent text-slate-400 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap transition-colors rounded-t-xl hover:bg-slate-50" data-target="tab-shopping">
+                    <i data-lucide="shopping-cart" class="w-5 h-5"></i> Shopping List
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="tab-recipes" class="tab-content space-y-8"></div>
+            <div id="tab-nutrition" class="tab-content hidden space-y-6"></div>
+            <div id="tab-waste" class="tab-content hidden"></div>
+            <div id="tab-shopping" class="tab-content hidden"></div>
+            
+        </div>
+
+    </main>
+
+    <!-- CHEF MODE OVERLAY (Full Screen) -->
+    <div id="chef-mode-view" class="fixed inset-0 bg-brand-50 z-50 hidden flex-col overflow-y-auto">
+        <header class="bg-white shadow-sm border-b border-brand-100 p-5 flex items-center justify-between sticky top-0 z-10">
+            <div class="flex items-center gap-4">
+                <div class="bg-gradient-to-br from-brand-400 to-lilac-500 text-white p-2.5 rounded-xl shadow-md shadow-brand-200"><i data-lucide="chef-hat" class="w-6 h-6"></i></div>
+                <h2 id="chef-recipe-title" class="font-extrabold text-xl text-slate-900">Recipe Name</h2>
+            </div>
+            <button onclick="closeChefMode()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2.5 rounded-xl transition-colors font-bold flex items-center gap-2">
+                <i data-lucide="x" class="w-5 h-5"></i> <span class="hidden sm:inline">Exit Mode</span>
+            </button>
+        </header>
+
+        <!-- Progress Bar -->
+        <div class="h-2 bg-slate-200 w-full">
+            <div id="chef-progress" class="h-full bg-gradient-to-r from-brand-400 to-lilac-500 transition-all duration-500 ease-out w-0 shadow-[0_0_10px_rgba(236,72,153,0.5)]"></div>
+        </div>
+
+        <div class="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-4xl mx-auto w-full relative min-h-[60vh]">
+            <div class="bg-white px-6 py-2 rounded-full shadow-sm text-brand-600 font-extrabold tracking-widest uppercase mb-8 text-sm border border-brand-100" id="chef-step-counter">Step 1 of X</div>
+            
+            <h1 class="text-3xl md:text-5xl font-black text-slate-900 leading-tight mb-16 text-balance" id="chef-step-text">
+                Gather your ingredients.
+            </h1>
+            
+            <div class="flex flex-wrap gap-4 w-full justify-center mt-auto md:mt-0">
+                <button id="chef-prev-btn" onclick="chefPrev()" class="px-8 py-4 rounded-2xl font-bold bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 transition-all flex items-center gap-3 opacity-50 cursor-not-allowed shadow-sm">
+                    <i data-lucide="arrow-left" class="w-6 h-6"></i> Previous
+                </button>
+                <button id="chef-next-btn" onclick="chefNext()" class="px-10 py-4 rounded-2xl font-bold btn-primary text-white transition-all flex items-center gap-3 text-lg shadow-lg shadow-brand-500/30">
+                    Next Step <i data-lucide="arrow-right" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // --- Setup & Config ---
+        lucide.createIcons();
+        
+        const dietaryOptions = [
+            "Vegetarian", "Vegan", "Halal", "Gluten Free", 
+            "High Protein", "Low Carb", "Low Calorie", 
+            "Keto", "Lactose Intolerant", "Nut Allergy"
+        ];
+        let selectedDiets = new Set();
+        let currentImageBase64 = null;
+        const GEMINI_MODEL = 'gemini-3.5-flash';
+        let appState = {
+            ingredients: [],
+            recipes: [],
+            wasteTips: [],
+            shoppingList: {}
+        };
+
+        // --- DOM Elements ---
+        const ui = {
+            views: {
+                input: document.getElementById('input-view'),
+                loading: document.getElementById('loading-view'),
+                results: document.getElementById('results-view'),
+                chef: document.getElementById('chef-mode-view')
+            },
+            inputs: {
+                imgUpload: document.getElementById('image-input'),
+                imgPreview: document.getElementById('image-preview'),
+                uploadPrompt: document.getElementById('upload-prompt'),
+                removeImgBtn: document.getElementById('remove-img-btn'),
+                textInput: document.getElementById('text-input'),
+                dietContainer: document.getElementById('dietary-container'),
+                errorMsg: document.getElementById('error-msg'),
+                apiKeyInput: document.getElementById('api-key-input'),
+                toggleKeyBtn: document.getElementById('toggle-key-btn')
+            },
+            loading: {
+                status: document.getElementById('loading-status'),
+                steps: {
+                    vision: document.getElementById('step-vision'),
+                    recipe: document.getElementById('step-recipe'),
+                    analyze: document.getElementById('step-analyze')
+                }
+            },
+            tabs: document.querySelectorAll('.tab-btn'),
+            tabContents: document.querySelectorAll('.tab-content')
+        };
+
+        // --- Initialization ---
+        function init() {
+            // Load API key from local storage
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                ui.inputs.apiKeyInput.value = savedKey;
+            } else {
+                setTimeout(() => ui.inputs.apiKeyInput.focus(), 300);
+            }
+
+            // Save key on change
+            ui.inputs.apiKeyInput.addEventListener('input', (e) => {
+                localStorage.setItem('gemini_api_key', e.target.value.trim());
+            });
+
+            // Toggle visibility
+            ui.inputs.toggleKeyBtn.addEventListener('click', () => {
+                const input = ui.inputs.apiKeyInput;
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    ui.inputs.toggleKeyBtn.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
+                } else {
+                    input.type = 'password';
+                    ui.inputs.toggleKeyBtn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
+                }
+                lucide.createIcons();
+            });
+
+            // Render diet pills
+            dietaryOptions.forEach(diet => {
+                const btn = document.createElement('button');
+                btn.className = 'diet-pill px-5 py-2.5 rounded-xl bg-white border-2 border-slate-100 text-sm font-bold text-slate-600 hover:border-brand-200 hover:text-brand-600 transition-all shadow-sm';
+                btn.textContent = diet;
+                btn.onclick = () => toggleDiet(btn, diet);
+                ui.inputs.dietContainer.appendChild(btn);
+            });
+
+            // Image handlers
+            ui.inputs.imgUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        currentImageBase64 = e.target.result;
+                        ui.inputs.imgPreview.src = currentImageBase64;
+                        ui.inputs.imgPreview.classList.remove('hidden');
+                        ui.inputs.uploadPrompt.classList.add('hidden');
+                        ui.inputs.removeImgBtn.classList.remove('hidden');
+                        ui.inputs.removeImgBtn.classList.add('flex');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            ui.inputs.removeImgBtn.addEventListener('click', () => {
+                currentImageBase64 = null;
+                ui.inputs.imgUpload.value = '';
+                ui.inputs.imgPreview.classList.add('hidden');
+                ui.inputs.uploadPrompt.classList.remove('hidden');
+                ui.inputs.removeImgBtn.classList.add('hidden');
+                ui.inputs.removeImgBtn.classList.remove('flex');
+            });
+
+            // Tab logic
+            ui.tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    ui.tabs.forEach(t => {
+                        t.classList.remove('border-brand-500', 'text-brand-600', 'active', 'bg-brand-50/50');
+                        t.classList.add('border-transparent', 'text-slate-400');
+                    });
+                    tab.classList.add('border-brand-500', 'text-brand-600', 'active', 'bg-brand-50/50');
+                    tab.classList.remove('border-transparent', 'text-slate-400');
+
+                    ui.tabContents.forEach(c => c.classList.add('hidden'));
+                    document.getElementById(tab.dataset.target).classList.remove('hidden');
+                });
+            });
+        }
+
+        function requestApiKey() {
+            let apiKey = ui.inputs.apiKeyInput.value.trim();
+            if (apiKey) return apiKey;
+
+            const enteredKey = window.prompt('Enter your Gemini API key to use PantryPilot AI:');
+            apiKey = enteredKey ? enteredKey.trim() : '';
+
+            if (!apiKey) {
+                ui.inputs.errorMsg.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 inline mr-2 -mt-1"></i>Please enter your Gemini API key to continue.';
+                ui.inputs.errorMsg.classList.remove('hidden');
+                ui.inputs.apiKeyInput.focus();
+                lucide.createIcons();
+                return '';
+            }
+
+            ui.inputs.apiKeyInput.value = apiKey;
+            localStorage.setItem('gemini_api_key', apiKey);
+            ui.inputs.errorMsg.classList.add('hidden');
+            return apiKey;
+        }
+
+        function toggleDiet(btn, diet) {
+            if (selectedDiets.has(diet)) {
+                selectedDiets.delete(diet);
+                btn.classList.remove('active');
+            } else {
+                selectedDiets.add(diet);
+                btn.classList.add('active');
+            }
+        }
+
+        // --- Core Agent API ---
+        async function callGemini(prompt, isJSON = true, imageBase64 = null) {
+            const apiKey = ui.inputs.apiKeyInput.value.trim();
+            if (!apiKey) throw new Error("API_KEY_MISSING");
+            
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+            let parts = [{ text: prompt }];
+            
+            if (imageBase64) {
+                const b64Data = imageBase64.split(',')[1];
+                const mimeType = imageBase64.substring(imageBase64.indexOf(':') + 1, imageBase64.indexOf(';'));
+                parts.push({ inlineData: { mimeType, data: b64Data } });
+            }
+
+            const payload = { contents: [{ parts }] };
+            if (isJSON) {
+                payload.generationConfig = { responseMimeType: "application/json" };
+            }
+
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        const message = data?.error?.message || `HTTP Error ${res.status}`;
+                        throw new Error(`${res.status}: ${message}`);
+                    }
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) {
+                        const reason = data.candidates?.[0]?.finishReason || 'empty response';
+                        throw new Error(`Gemini returned no text (${reason}).`);
+                    }
+
+                    if (!isJSON) return text;
+
+                    try {
+                        return JSON.parse(text);
+                    } catch (parseErr) {
+                        const cleaned = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+                        return JSON.parse(cleaned);
+                    }
+                } catch (err) {
+                    if (i === 2) throw err;
+                    await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+                }
+            }
+        }
+
+        // --- Agent Definitions ---
+        
+        async function agentExtractIngredients(imageBase64, textInput) {
+            updateLoadingStatus('vision', 'Gathering what is in your kitchen...', 'animate-pulse text-brand-500');
+            const prompt = `
+                Act as a master pantry parser. Extract all edible ingredients.
+                ${textInput ? `Text provided: ${textInput}` : ''}
+                Merge image items and text items into one clean array of strings. 
+                Ignore non-food. Format as raw base ingredients (e.g., "chicken breast", "milk").
+                Return STRICTLY a JSON array of strings: ["item1", "item2"]
+            `;
+            try {
+                const res = await callGemini(prompt, true, imageBase64);
+                updateLoadingStatus('vision', 'Ingredients are ready.', 'text-green-500', 'check-circle-2');
+                return Array.isArray(res) ? res : [];
+            } catch (e) {
+                if (textInput) {
+                    updateLoadingStatus('vision', 'Ingredients are ready.', 'text-green-500', 'check-circle-2');
+                    return textInput.split(',').map(s => s.trim());
+                }
+                throw e;
+            }
+        }
+
+        async function agentPlanRecipes(ingredients, preferences, mode) {
+            updateLoadingStatus('recipe', mode === 'surprise' ? 'Cooking up one perfect pick...' : 'Cooking up recipe ideas...', 'animate-pulse text-brand-500');
+            
+            let recipeCount = mode === 'surprise' || mode === 'chef' ? 1 : 3;
+            let persona = mode === 'surprise' 
+                ? "Act as a Michelin-star personal chef. Generate EXACTLY ONE ultimate recipe that minimizes waste, is the absolute best match for the ingredients, and tastes amazing." 
+                : "Act as an expert culinary AI. Generate exactly 3 distinct recipes.";
+
+            const prompt = `
+                ${persona}
+                Available ingredients: ${ingredients.join(', ')}.
+                Dietary Preferences: ${preferences || 'None'}.
+                
+                Respond STRICTLY with a JSON array containing ${recipeCount} object(s) with these exact keys:
+                [
+                  {
+                    "name": "Recipe Name",
+                    "match_reason": "Explain WHY you chose this based on ingredients, waste, and diets (1 short sentence)",
+                    "prep_time": "e.g., 10 mins",
+                    "cook_time": "e.g., 20 mins",
+                    "difficulty": "Easy|Medium|Hard",
+                    "category": "Breakfast|Lunch|Dinner|Snack|Dessert",
+                    "calories": 450,
+                    "macros": {"protein": "25g", "carbs": "40g", "fat": "15g"},
+                    "health_score": 8,
+                    "healthier_alternative": "A tip to make it healthier",
+                    "ingredients": ["1 cup rice", "2 chicken breasts"],
+                    "missing_ingredients": ["soy sauce", "garlic"],
+                    "substitutions": [{"original": "heavy cream", "substitute": "milk + butter"}],
+                    "steps": ["Step 1 description", "Step 2 description"],
+                    "drink_pairing": "Suggested drink"
+                  }
+                ]
+            `;
+            const recipes = await callGemini(prompt, true);
+            updateLoadingStatus('recipe', 'Recipes are plated.', 'text-green-500', 'check-circle-2');
+            return recipes;
+        }
+
+        async function agentAnalyzeLogistics(ingredients, recipes) {
+            updateLoadingStatus('analyze', 'Adding the finishing touches...', 'animate-pulse text-brand-500');
+            
+            // Waste Analysis
+            const wastePrompt = `
+                Analyze these ingredients for food waste risk: ${ingredients.join(', ')}.
+                Return a JSON array of highly perishable items (max 3).
+                [{"ingredient": "name", "urgency": "High|Medium", "reason": "why", "recommended_use": "how to use"}]
+            `;
+            
+            // Shopping List Analysis
+            const missing = [...new Set(recipes.flatMap(r => r.missing_ingredients || []))];
+            let shoppingPrompt = 'Return {}';
+            if (missing.length > 0) {
+                shoppingPrompt = `
+                    Categorize these missing ingredients into grocery aisles: ${missing.join(', ')}.
+                    Return a JSON object: {"Produce": ["item"], "Dairy": ["item"]}
+                `;
+            }
+
+            const [waste, shopping] = await Promise.all([
+                callGemini(wastePrompt, true).catch(() => []),
+                callGemini(shoppingPrompt, true).catch(() => ({}))
+            ]);
+
+            updateLoadingStatus('analyze', 'Menu details are ready.', 'text-green-500', 'check-circle-2');
+            return { waste, shopping };
+        }
+
+        // --- Workflow Orchestration ---
+        
+        function updateLoadingStatus(stepId, text, colorClass, iconName = 'circle-dashed') {
+            const el = ui.loading.steps[stepId];
+            el.className = `flex items-center gap-4 font-bold ${colorClass}`;
+            el.innerHTML = `<i data-lucide="${iconName}" class="w-6 h-6"></i> <span>${text}</span>`;
+            lucide.createIcons();
+        }
+
+        async function startWorkflow(mode) {
+            const apiKey = requestApiKey();
+            if (!apiKey) {
+                return;
+            }
+
+            const textVal = ui.inputs.textInput.value.trim();
+            if (!currentImageBase64 && !textVal) {
+                ui.inputs.errorMsg.innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5 inline mr-2 -mt-1"></i>Please upload an image or type some ingredients.';
+                ui.inputs.errorMsg.classList.remove('hidden');
+                lucide.createIcons();
+                return;
+            }
+            ui.inputs.errorMsg.classList.add('hidden');
+
+            // View transition
+            ui.views.input.classList.add('hidden');
+            ui.views.loading.classList.remove('hidden');
+
+            try {
+                const prefs = Array.from(selectedDiets).join(', ');
+                
+                // Agent 1
+                appState.ingredients = await agentExtractIngredients(currentImageBase64, textVal);
+                
+                // Agent 2
+                appState.recipes = await agentPlanRecipes(appState.ingredients, prefs, mode);
+                
+                // Agent 3 & 4 (Parallel)
+                const logistics = await agentAnalyzeLogistics(appState.ingredients, appState.recipes);
+                appState.wasteTips = logistics.waste;
+                appState.shoppingList = logistics.shopping;
+
+                if (mode === 'chef') {
+                    // Instantly open Chef Mode for the 1st recipe
+                    ui.views.loading.classList.add('hidden');
+                    startChefMode(0);
+                } else {
+                    // Render normal results
+                    renderResults(mode);
+                    ui.views.loading.classList.add('hidden');
+                    ui.views.results.classList.remove('hidden');
+                }
+
+            } catch (err) {
+                console.error(err);
+                ui.views.loading.classList.add('hidden');
+                ui.views.input.classList.remove('hidden');
+                
+                if (err.message === "API_KEY_MISSING" || err.message.includes("400") || err.message.includes("403")) {
+                    ui.inputs.errorMsg.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5 inline mr-2 -mt-1"></i>Invalid or missing API Key. Please check your key and try again.';
+                } else {
+                    ui.inputs.errorMsg.innerHTML = `<i data-lucide="alert-triangle" class="w-5 h-5 inline mr-2 -mt-1"></i>${err.message || 'An error occurred during AI processing. Please try again.'}`;
+                }
+                
+                ui.inputs.errorMsg.classList.remove('hidden');
+                lucide.createIcons();
+            }
+        }
+
+        // --- Rendering ---
+        
+        function getDifficultyColor(diff) {
+            const d = (diff || '').toLowerCase();
+            if (d === 'easy') return 'text-green-600 bg-green-100 border-green-200';
+            if (d === 'medium') return 'text-orange-600 bg-orange-100 border-orange-200';
+            return 'text-red-600 bg-red-100 border-red-200';
+        }
+
+        function renderResults(mode) {
+            document.getElementById('detected-ingredients-list').textContent = appState.ingredients.join(', ');
+            
+            // 1. Recipes Tab
+            const recipesContainer = document.getElementById('tab-recipes');
+            recipesContainer.innerHTML = '';
+            
+            appState.recipes.forEach((recipe, idx) => {
+                const isSurprise = mode === 'surprise';
+                
+                let html = `
+                    <div class="bg-white rounded-3xl border-2 ${isSurprise ? 'border-lilac-300 shadow-[0_10px_40px_-10px_rgba(168,85,247,0.3)]' : 'border-slate-100 shadow-sm'} overflow-hidden">
+                        ${isSurprise ? `<div class="bg-gradient-to-r from-lilac-500 to-brand-500 px-6 py-3 text-white font-black text-sm tracking-widest uppercase flex items-center justify-center gap-2"><i data-lucide="sparkles" class="w-5 h-5"></i> Chef's Recommendation</div>` : ''}
+                        
+                        <div class="p-6 md:p-8 border-b border-slate-100 bg-slate-50/50">
+                            <div class="flex flex-wrap justify-between items-start gap-5 mb-4">
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wider text-brand-500 mb-2 block bg-brand-50 inline-block px-3 py-1 rounded-lg">${recipe.category || 'Meal'}</span>
+                                    <h2 class="text-3xl md:text-4xl font-black text-slate-900">${recipe.name}</h2>
+                                </div>
+                                <button onclick="startChefMode(${idx})" class="btn-primary px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 text-white shadow-lg shadow-brand-500/20">
+                                    <i data-lucide="chef-hat" class="w-5 h-5"></i> Cook Now
+                                </button>
+                            </div>
+                            
+                            <div class="flex gap-4 p-4 mb-6 bg-white rounded-2xl border border-brand-100 shadow-sm">
+                                <i data-lucide="info" class="w-6 h-6 text-brand-400 flex-shrink-0 mt-0.5"></i>
+                                <p class="text-slate-600 font-medium italic">"${recipe.match_reason}"</p>
+                            </div>
+                            
+                            <div class="flex flex-wrap gap-3">
+                                <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm shadow-sm">
+                                    <i data-lucide="clock" class="w-5 h-5 text-lilac-500"></i> ${recipe.prep_time} prep + ${recipe.cook_time} cook
+                                </div>
+                                <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm shadow-sm">
+                                    <i data-lucide="flame" class="w-5 h-5 text-orange-500"></i> ${recipe.calories} kcal
+                                </div>
+                                <div class="flex items-center gap-2 px-4 py-2 rounded-xl border ${getDifficultyColor(recipe.difficulty)} text-sm font-black uppercase tracking-wider shadow-sm">
+                                    ${recipe.difficulty}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 bg-white">
+                            <!-- Ingredients Column -->
+                            <div class="p-6 md:p-8 space-y-6">
+                                <div>
+                                    <h3 class="font-extrabold text-slate-900 mb-5 flex items-center gap-2 text-lg"><i data-lucide="shopping-bag" class="w-5 h-5 text-brand-500"></i> Ingredients</h3>
+                                    <ul class="space-y-3 text-slate-700 font-medium">
+                                        ${(recipe.ingredients || []).map(i => `<li class="flex gap-3"><span class="text-brand-400 font-black">•</span> ${i}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                
+                                ${(recipe.missing_ingredients || []).length > 0 ? `
+                                <div class="bg-red-50 border border-red-100 rounded-2xl p-5">
+                                    <h4 class="text-sm font-black text-red-600 uppercase tracking-wider mb-3 flex items-center gap-2"><i data-lucide="alert-circle" class="w-4 h-4"></i> Missing</h4>
+                                    <ul class="space-y-2 text-sm text-red-700 font-medium">
+                                        ${recipe.missing_ingredients.map(i => `<li>- ${i}</li>`).join('')}
+                                    </ul>
+                                </div>` : ''}
+
+                                ${(recipe.substitutions || []).length > 0 ? `
+                                <div class="bg-amber-50 border border-amber-100 rounded-2xl p-5">
+                                    <h4 class="text-sm font-black text-amber-600 uppercase tracking-wider mb-3 flex items-center gap-2"><i data-lucide="lightbulb" class="w-4 h-4"></i> Substitutions</h4>
+                                    <ul class="space-y-2 text-sm text-amber-800 font-medium">
+                                        ${recipe.substitutions.map(s => `<li class="leading-tight"><del class="opacity-50 text-slate-500">${s.original}</del> <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1 text-amber-400"></i> <strong>${s.substitute}</strong></li>`).join('')}
+                                    </ul>
+                                </div>` : ''}
+                            </div>
+                            
+                            <!-- Steps Column -->
+                            <div class="p-6 md:p-8 md:col-span-2">
+                                <h3 class="font-extrabold text-slate-900 mb-5 flex items-center gap-2 text-lg"><i data-lucide="list-ordered" class="w-5 h-5 text-brand-500"></i> Instructions</h3>
+                                <div class="space-y-4">
+                                    ${(recipe.steps || []).map((step, i) => `
+                                        <div class="flex gap-5 p-5 rounded-2xl bg-slate-50 border border-transparent hover:border-brand-200 hover:bg-white hover:shadow-md transition-all group">
+                                            <div class="w-10 h-10 rounded-xl bg-brand-100 text-brand-600 font-black flex items-center justify-center flex-shrink-0 group-hover:bg-brand-500 group-hover:text-white transition-colors">${i+1}</div>
+                                            <p class="text-slate-700 leading-relaxed pt-1.5 font-medium">${step}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                
+                                ${recipe.drink_pairing ? `
+                                <div class="mt-8 pt-6 border-t border-slate-100 flex items-start gap-4 text-slate-700 bg-lilac-50 p-5 rounded-2xl">
+                                    <div class="bg-white p-2 rounded-xl shadow-sm">
+                                        <i data-lucide="wine" class="w-6 h-6 text-lilac-500 flex-shrink-0"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-slate-900 block mb-1 font-extrabold">Perfect Pairing</strong>
+                                        <span class="font-medium">${recipe.drink_pairing}</span>
+                                    </div>
+                                </div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                recipesContainer.innerHTML += html;
+            });
+
+            // 2. Nutrition Tab
+            const nutritionContainer = document.getElementById('tab-nutrition');
+            nutritionContainer.innerHTML = appState.recipes.map(recipe => `
+                <div class="bg-white p-8 rounded-3xl border-2 border-slate-100 shadow-sm">
+                    <h3 class="text-2xl font-black text-slate-900 mb-6">${recipe.name}</h3>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-orange-50 p-5 rounded-2xl text-center border border-orange-100">
+                            <div class="text-3xl font-black text-orange-500">${recipe.calories}</div>
+                            <div class="text-xs text-orange-600 font-bold uppercase tracking-wider mt-2">Calories</div>
+                        </div>
+                        <div class="bg-blue-50 p-5 rounded-2xl text-center border border-blue-100">
+                            <div class="text-3xl font-black text-blue-500">${recipe.macros?.protein || '-'}</div>
+                            <div class="text-xs text-blue-600 font-bold uppercase tracking-wider mt-2">Protein</div>
+                        </div>
+                        <div class="bg-green-50 p-5 rounded-2xl text-center border border-green-100">
+                            <div class="text-3xl font-black text-green-500">${recipe.macros?.carbs || '-'}</div>
+                            <div class="text-xs text-green-600 font-bold uppercase tracking-wider mt-2">Carbs</div>
+                        </div>
+                        <div class="bg-brand-50 p-5 rounded-2xl text-center border border-brand-100">
+                            <div class="text-3xl font-black text-brand-500">${recipe.health_score}/10</div>
+                            <div class="text-xs text-brand-600 font-bold uppercase tracking-wider mt-2">Health Score</div>
+                        </div>
+                    </div>
+                    
+                    ${recipe.healthier_alternative ? `
+                    <div class="flex gap-4 items-start bg-green-50 border border-green-100 p-5 rounded-2xl text-green-800 font-medium">
+                        <div class="bg-white p-2 rounded-lg shadow-sm text-green-500">
+                            <i data-lucide="leaf" class="w-6 h-6 flex-shrink-0"></i>
+                        </div>
+                        <p class="pt-1"><strong class="font-extrabold text-green-900">Pro Tip:</strong> ${recipe.healthier_alternative}</p>
+                    </div>` : ''}
+                </div>
+            `).join('');
+
+            // 3. Waste Tab
+            const wasteContainer = document.getElementById('tab-waste');
+            if (!appState.wasteTips || appState.wasteTips.length === 0) {
+                wasteContainer.innerHTML = `
+                    <div class="text-center py-16 bg-white rounded-3xl border-2 border-slate-100 shadow-sm">
+                        <div class="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <i data-lucide="leaf" class="w-10 h-10 text-green-500"></i>
+                        </div>
+                        <h3 class="text-2xl font-black text-slate-900 mb-2">Looking good!</h3>
+                        <p class="text-slate-500 font-medium text-lg">No highly perishable ingredients detected.</p>
+                    </div>`;
+            } else {
+                wasteContainer.innerHTML = `
+                    <div class="space-y-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm mb-6 flex gap-4 items-center">
+                            <div class="bg-brand-50 p-3 rounded-xl text-brand-500"><i data-lucide="info" class="w-6 h-6"></i></div>
+                            <p class="text-slate-700 font-bold text-lg">The AI has identified items that should be cooked immediately to prevent waste.</p>
+                        </div>
+                        ${appState.wasteTips.map(tip => `
+                            <div class="bg-white p-6 rounded-2xl border-2 ${tip.urgency?.toLowerCase() === 'high' ? 'border-red-200 shadow-sm' : 'border-amber-200 shadow-sm'} flex items-start gap-5">
+                                <div class="p-3 rounded-xl ${tip.urgency?.toLowerCase() === 'high' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-500'}">
+                                    <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-black text-slate-900 text-xl capitalize mb-2">${tip.ingredient} <span class="text-xs font-bold px-3 py-1 rounded-lg ${tip.urgency?.toLowerCase() === 'high' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'} ml-3 align-middle">${tip.urgency} Priority</span></h4>
+                                    <p class="text-slate-600 font-medium mb-2"><strong class="text-slate-900">Why:</strong> ${tip.reason}</p>
+                                    <p class="text-brand-600 font-medium"><strong class="text-brand-700">Use it:</strong> ${tip.recommended_use}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+            }
+
+            // 4. Shopping Tab
+            const shoppingContainer = document.getElementById('tab-shopping');
+            if (!appState.shoppingList || Object.keys(appState.shoppingList).length === 0) {
+                shoppingContainer.innerHTML = `
+                    <div class="text-center py-16 bg-white rounded-3xl border-2 border-slate-100 shadow-sm">
+                        <div class="bg-brand-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <i data-lucide="shopping-bag" class="w-10 h-10 text-brand-500"></i>
+                        </div>
+                        <h3 class="text-2xl font-black text-slate-900 mb-2">Kitchen is fully stocked!</h3>
+                        <p class="text-slate-500 font-medium text-lg">You have everything needed for these recipes.</p>
+                    </div>`;
+            } else {
+                let sHtml = '<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">';
+                Object.entries(appState.shoppingList).forEach(([aisle, items]) => {
+                    if (items.length === 0) return;
+                    sHtml += `
+                        <div class="bg-white p-6 rounded-3xl border-2 border-slate-100 shadow-sm">
+                            <h3 class="font-black text-xl text-slate-900 mb-5 border-b-2 border-slate-50 pb-3 flex items-center gap-3">
+                                <i data-lucide="layout-grid" class="w-5 h-5 text-brand-400"></i> ${aisle}
+                            </h3>
+                            <ul class="space-y-4">
+                                ${items.map(item => `
+                                    <label class="flex items-center gap-4 cursor-pointer group">
+                                        <div class="w-6 h-6 rounded-lg border-2 border-slate-200 group-hover:border-brand-400 flex items-center justify-center transition-colors bg-slate-50">
+                                            <i data-lucide="check" class="w-4 h-4 text-transparent group-hover:text-brand-500 transition-colors"></i>
+                                        </div>
+                                        <span class="text-slate-700 font-medium group-hover:text-slate-900 transition-colors text-lg">${item}</span>
+                                    </label>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    `;
+                });
+                sHtml += '</div>';
+                shoppingContainer.innerHTML = sHtml;
+            }
+
+            lucide.createIcons();
+            ui.tabs[0].click(); // open first tab
+        }
+
+        // --- Chef Mode Logic ---
+        let chefState = {
+            recipe: null,
+            currentStep: 0,
+            totalSteps: 0
+        };
+
+        function startChefMode(recipeIndex) {
+            chefState.recipe = appState.recipes[recipeIndex];
+            chefState.currentStep = 0;
+            
+            // Generate steps array (Gather ingredients + actual steps + Enjoy)
+            chefState.steps = [
+                "Gather your ingredients. Make sure you have everything prepped and ready.",
+                ...(chefState.recipe.steps || []),
+                "You're done! Plate your masterpiece and enjoy."
+            ];
+            chefState.totalSteps = chefState.steps.length;
+
+            document.getElementById('chef-recipe-title').textContent = chefState.recipe.name;
+            ui.views.results.classList.add('hidden');
+            ui.views.input.classList.add('hidden');
+            ui.views.chef.classList.remove('hidden');
+            ui.views.chef.classList.add('flex');
+            
+            renderChefStep();
+        }
+
+        function closeChefMode() {
+            ui.views.chef.classList.add('hidden');
+            ui.views.chef.classList.remove('flex');
+            ui.views.results.classList.remove('hidden');
+        }
+
+        function chefNext() {
+            if (chefState.currentStep < chefState.totalSteps - 1) {
+                chefState.currentStep++;
+                renderChefStep();
+            } else {
+                closeChefMode();
+            }
+        }
+
+        function chefPrev() {
+            if (chefState.currentStep > 0) {
+                chefState.currentStep--;
+                renderChefStep();
+            }
+        }
+
+        function renderChefStep() {
+            const stepTextEl = document.getElementById('chef-step-text');
+            const counterEl = document.getElementById('chef-step-counter');
+            const progressEl = document.getElementById('chef-progress');
+            const prevBtn = document.getElementById('chef-prev-btn');
+            const nextBtn = document.getElementById('chef-next-btn');
+
+            // Animate text change
+            stepTextEl.style.opacity = 0;
+            stepTextEl.style.transform = 'translateY(15px)';
+            
+            setTimeout(() => {
+                stepTextEl.textContent = chefState.steps[chefState.currentStep];
+                counterEl.textContent = `Step ${chefState.currentStep + 1} of ${chefState.totalSteps}`;
+                
+                const pct = ((chefState.currentStep + 1) / chefState.totalSteps) * 100;
+                progressEl.style.width = `${pct}%`;
+
+                // Button states
+                if (chefState.currentStep === 0) {
+                    prevBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    prevBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+
+                if (chefState.currentStep === chefState.totalSteps - 1) {
+                    nextBtn.innerHTML = 'Finish <i data-lucide="check-circle" class="w-6 h-6"></i>';
+                    nextBtn.classList.replace('btn-primary', 'bg-green-500');
+                    nextBtn.classList.add('hover:bg-green-600');
+                } else {
+                    nextBtn.innerHTML = 'Next Step <i data-lucide="arrow-right" class="w-6 h-6"></i>';
+                    nextBtn.classList.replace('bg-green-500', 'btn-primary');
+                    nextBtn.classList.remove('hover:bg-green-600');
+                }
+                
+                lucide.createIcons();
+                
+                stepTextEl.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+                stepTextEl.style.opacity = 1;
+                stepTextEl.style.transform = 'translateY(0)';
+            }, 200);
+        }
+
+        // Run init on load
+        window.onload = init;
+    </script>
+</body>
+</html>
